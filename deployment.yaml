@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wooless
+  namespace: production
+  labels:
+    app: wooless
+spec:
+  selector:
+    app: wooless
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+  type: NodePort
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wooless
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: wooless
+  strategy:
+    type: RollingUpdate
+  template: #Template for container
+    metadata:
+      labels:
+        app: wooless
+    spec:
+      containers:
+      - name: wooless
+        image:  asia.gcr.io/$PROJECT_ID/production/wooless:$SHORT_SHA
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: wooless
+        resources:
+          requests:
+            cpu: 50m
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wooless
+  namespace: production
+spec:
+  maxReplicas: 25
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wooless
+  targetCPUUtilizationPercentage: 100
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wooless
+  namespace: production
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: wooless
+    kubernetes.io/ingress.allow-http: "false"
+    networking.gke.io/managed-certificates: wooless
+spec:
+  rules:
+    - host: app.wooless.com
+      http:
+        paths:
+        - path: /*
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: wooless
+              port: 
+                number: 80
+
+---
+apiVersion: networking.gke.io/v1beta2
+kind: ManagedCertificate
+metadata:
+  name: wooless
+  namespace: production
+spec:
+  domains:
+    - app.wooless.com

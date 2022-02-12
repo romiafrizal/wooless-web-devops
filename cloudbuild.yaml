@@ -1,0 +1,29 @@
+steps:
+- id: Build-docker
+  name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'asia.gcr.io/$PROJECT_ID/production/wooless:$SHORT_SHA', '.']
+  timeout: 900s
+
+- id: Push-docker
+  name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'asia.gcr.io/$PROJECT_ID/production/wooless:$SHORT_SHA']
+  timeout: 900s
+
+- id: envSubst-for-deployment.yml
+  name: 'gcr.io/$PROJECT_ID/envsubst'
+  env:
+    - 'SHORT_SHA=$SHORT_SHA'
+    - 'PROJECT_ID=$PROJECT_ID'
+  args: ['deployment.yaml']
+
+- id: Deploy-to-GKE
+  name: "gcr.io/cloud-builders/gke-deploy" 
+  args:
+  - run
+  - --filename=deployment.yaml
+  - --cluster=wooless-production
+  - --location=asia-southeast2-a
+  timeout: 900s
+
+# Global Timeout
+timeout: '3600s'
