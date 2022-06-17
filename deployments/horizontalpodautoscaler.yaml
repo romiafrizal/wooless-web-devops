@@ -1,0 +1,11 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wooless
+spec:
+  minReplicas: 3
+  maxReplicas: 25
+  scaleTargetRef:
+    kind: Deployment
+    name: wooless
+  targetCPUUtilizationPercentage: 50 # percent
