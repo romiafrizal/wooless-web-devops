@@ -1,0 +1,25 @@
+aws s3api create-bucket --bucket romi-d15-kops-state --region ap-southeast-1
+aws s3api create-bucket --bucket romi-d15-kops-state --region ap-southeast-1 --create-bucket-configuration LocationConstraint=ap-southeast-1
+
+s3://romi-d15-kops-state
+"/hostedzone/Z01504293VYVJ3L61O7N3"
+
+aws route53 list-hosted-zones | jq '.HostedZones[] | select(.Name=="devops.debiverse.com.") | .Id'
+
+kops create cluster \
+    --master-size t2.small \
+	--node-size t2.small \
+    --name=${NAME} \
+    --cloud=aws \
+    --zones=ap-south-1a \
+    --discovery-store=s3://romi-d15-kops-state/${NAME}/discovery
+
+
+kops update cluster --name devops.debiverse.com --yes --admin
+
+
+aws s3api delete-objects \
+      --bucket romi-d15-kops-state \
+      --delete "$(aws s3api list-object-versions \
+      --bucket <value> | \
+      jq '{Objects: [.Versions[] | {Key:.Key, VersionId : .VersionId}], Quiet: false}')"
